@@ -19,6 +19,7 @@ class HighlightLinksInCategory {
 
     public static function onGetLinkColours( $linkcolour_ids, &$colours ) {
 	global $wgHighlightLinksInCategory;
+    global $wgHighlightLinksInCategoryFollowRedirects;
 
         if ( ! count($wgHighlightLinksInCategory) ) {
             return true;
@@ -26,7 +27,16 @@ class HighlightLinksInCategory {
 
         # linkcolour_ids only contains pages that exist, which does a lot
         # of our work for us
-        $pageIDs  = array_keys($linkcolour_ids);
+        # let's follow all redirects if the user wants to
+        $targetPageIDs  = [];
+        if not ( $wgHighlightLinksInCategoryFollowRedirects ) {
+            targetPageIDs = array_keys($linkcolour_ids);
+        }
+        else {
+            foreach ( $linkcolour_ids as $id => $page ) {
+                $targetPageIDs[] = $page->isRedirect() ? $page->followRedirect()->getId() : $id;
+            }
+        }
         $catNames = array_keys($wgHighlightLinksInCategory);
 
         # Get page ids with appropriate categories from the DB
@@ -36,7 +46,7 @@ class HighlightLinksInCategory {
             array('cl_from', 'cl_to'),
             $dbr->makeList( array(
                 $dbr->makeList(
-                    array( 'cl_from' => $pageIDs ), LIST_OR),
+                    array( 'cl_from' => $targetPageIDs ), LIST_OR),
                 $dbr->makeList(
                     array( 'cl_to'   => $catNames), LIST_OR)
                 ),
