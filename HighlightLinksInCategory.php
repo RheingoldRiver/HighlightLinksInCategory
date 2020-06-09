@@ -18,7 +18,7 @@
 class HighlightLinksInCategory {
 
     public static function onGetLinkColours( $linkcolour_ids, &$colours ) {
-	global $wgHighlightLinksInCategory;
+    global $wgHighlightLinksInCategory;
     global $wgHighlightLinksInCategoryFollowRedirects;
 
         if ( ! count($wgHighlightLinksInCategory) ) {
@@ -29,19 +29,33 @@ class HighlightLinksInCategory {
         # of our work for us
         # let's follow all redirects if the user wants to
         $targetPageIDs  = [];
-        if not ( $wgHighlightLinksInCategoryFollowRedirects ) {
-            targetPageIDs = array_keys($linkcolour_ids);
-        }
-        else {
-            foreach ( $linkcolour_ids as $id => $page ) {
-                $targetPageIDs[] = $page->isRedirect() ? $page->followRedirect()->getId() : $id;
+        $dbr = wfGetDB( DB_REPLICA );
+        
+        if ( $wgHighlightLinksInCategoryFollowRedirects ) {
+            $res0 = $dbr->select(
+                [ 'redirect', 'page' ],
+                [ 'rd_from', 'page_id' ],
+                $dbr->makeList( [
+                    'rd_namespace = page_namespace',
+                    'rd_title = page_title',
+                    $dbr->makeList( $targetPageIDs, LIST_OR ),
+                   'rd_interwiki IS NULL',
+                ], LIST_AND )
+            );
+            foreach ( $res0 as $row ) {
+                $targetPageIDs = array_diff( $targetPageIDs, $row->rd_from );
+                $targetPageIDs[] = $row->page_id;
             }
         }
+        else {
+            $targetPageIDs = array_keys($linkcolour_ids);
+        }
+
         $catNames = array_keys($wgHighlightLinksInCategory);
 
         # Get page ids with appropriate categories from the DB
         # There's an index on (cl_from, cl_to) so this should be fast
-        $dbr = wfGetDB( DB_REPLICA );
+        
         $res = $dbr->select( 'categorylinks',
             array('cl_from', 'cl_to'),
             $dbr->makeList( array(
