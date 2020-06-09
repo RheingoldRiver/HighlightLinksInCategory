@@ -28,7 +28,7 @@ class HighlightLinksInCategory {
         # linkcolour_ids only contains pages that exist, which does a lot
         # of our work for us
         # let's follow all redirects if the user wants to
-        $targetPageIDs  = [];
+        $targetPageIDs  = array_keys($linkcolour_ids);
         $dbr = wfGetDB( DB_REPLICA );
         
         if ( $wgHighlightLinksInCategoryFollowRedirects ) {
@@ -46,9 +46,6 @@ class HighlightLinksInCategory {
                 $targetPageIDs = array_diff( $targetPageIDs, $row->rd_from );
                 $targetPageIDs[] = $row->page_id;
             }
-        }
-        else {
-            $targetPageIDs = array_keys($linkcolour_ids);
         }
 
         $catNames = array_keys($wgHighlightLinksInCategory);
