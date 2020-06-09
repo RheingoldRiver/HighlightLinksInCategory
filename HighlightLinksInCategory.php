@@ -27,14 +27,18 @@ class HighlightLinksInCategory {
 
         # linkcolour_ids only contains pages that exist, which does a lot
         # of our work for us
-        # let's follow all redirects if the user wants to
-        
         $pagesToQuery = array_keys($linkcolour_ids);
+        
+        # intermediate value that will help us construct pageToTargets
         $nonRedirects = array_keys($linkcolour_ids);
-        $pageToTargetLookup = [];
+        
+        # associative array of page -> target. will be page -> page if
+        # link is not a redirect or if user does not want redirects followed
+        $pageToTargets = [];
 
         $dbr = wfGetDB( DB_REPLICA );
         
+        # follow all redirects only if the user wants to
         if ( $wgHighlightLinksInCategoryFollowRedirects ) {
             $res0 = $dbr->select(
                 [ 'redirect', 'page' ],
@@ -54,15 +58,19 @@ class HighlightLinksInCategory {
                 $pagesToQuery = array_diff( $pagesToQuery, [$row->rd_from] );
                 
                 # then make sure we remember this association
-                $pageToTargetLookup[$row->rd_from] = $row->page_id;
-                # and we also need to query this later
+                $pageToTargets[$row->rd_from] = $row->page_id;
+                # and we also need to query the target id later
                 $pagesToQuery[] = $row->page_id;
             }
             
-            # now that nonRedirects is fully populated, tell our lookup about them
-            foreach ( $nonRedirects as $nonRedirect ) {
-                $pageToTargetLookup[$nonRedirect] = $nonRedirect;
-            }
+        }
+        
+        # now that nonRedirects is fully populated, tell our lookup about them
+        # we can do this regardless of whether we wanted to follow redirects or not
+        # if we didn't follow redirects, this is the trivial operation of moving all
+        # pages here
+        foreach ( $nonRedirects as $nonRedirect ) {
+            $pageToTargets[$nonRedirect] = $nonRedirect;
         }
 
         $catNames = array_keys($wgHighlightLinksInCategory);
@@ -89,17 +97,11 @@ class HighlightLinksInCategory {
         }
         
         # Add the color classes to each page
-        foreach ( $pageToTargetLookup as $page=>$target ) {
-            echo( $page );
-            echo( ',' );
-            echo( $target );
-            echo( $classes[ $target ] );
-            echo( '<br>' );
+        foreach ( $pageToTargets as $page=>$target ) {
             if ( $classes[ $target ] != '' ) {
-                $colours[ $page ] = $classes[ $target ];
+                $colours[ $linkcolour_ids[$page] ] = $classes[ $target ];
             }
         }
     }
 
 }
-
