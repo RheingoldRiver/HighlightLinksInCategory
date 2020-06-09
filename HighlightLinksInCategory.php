@@ -78,7 +78,7 @@ class HighlightLinksInCategory {
         # Get page ids with appropriate categories from the DB
         # There's an index on (cl_from, cl_to) so this should be fast
         
-        $res = $dbr->select( 'categorylinks',
+        $resultCL = $dbr->select( 'categorylinks',
             array('cl_from', 'cl_to'),
             $dbr->makeList( array(
                 $dbr->makeList(
@@ -91,14 +91,16 @@ class HighlightLinksInCategory {
         );
         
         $classes = [];
-        foreach( $res as $s ) {
-            $classes[ $s->cl_from ] = '';
+        foreach( $resultCL as $s ) {
+            if ( ! array_key_exists( $s->cl_from, $classes ) ) {
+                $classes[ $s->cl_from ] = '';
+            }
             $classes[ $s->cl_from ] .= ' ' . $wgHighlightLinksInCategory[ $s->cl_to ];
         }
         
         # Add the color classes to each page
         foreach ( $pageToTargets as $page=>$target ) {
-            if ( $classes[ $target ] != '' ) {
+            if ( array_key_exists( $target, $classes ) ) {
                 $colours[ $linkcolour_ids[$page] ] = $classes[ $target ];
             }
         }
